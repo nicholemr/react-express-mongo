@@ -3,47 +3,48 @@ const express = require("express");
 const mongoose = require("mongoose");
 const path = require("path");
 const routes = require("./routes/api");
-const MongoClient = require("mongodb").MongoClient;
+const { MongoClient } = require("mongodb");
 
 require("dotenv").config();
 
 let db;
 let app = express();
-let bodyParser = require("body-parser");
-let todos = [];
-
-const mongoClient = new MongoClient(process.env.MONGODB_URL, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
-
 // Using `public` for static files: http://expressjs.com/en/starter/static-files.html
 app.use(express.static("public"));
 
-// Use bodyParser to parse application/x-www-form-urlencoded form data
-var urlencodedParser = bodyParser.urlencoded({ extended: false });
+let bodyParser = require("body-parser");
+app.use(bodyParser.json());
+// serving react app on same port as express api
+app.use(express.static(path.join(__dirname, "client/build")));
 
-// Connect to database and insert default users into users collection
-mongoClient.connect((err) => {
-  let dbTodos = [];
-  console.log("Connected successfully to database");
+let todos = [];
 
-  db = mongoClient.db(process.env.DB_NAME);
+const mongoClient = new MongoClient(process.env.MONGODB_URL);
+async function run() {
+  try {
+    const database = mongoClient.db(process.env.DB_NAME);
+    const todos = database.collection('todos');
+    const todo = await todos.findOne({name: 'first_todo'})
+    console.log('todo inserted! maybe?, todo collection:', todo)
+    // Query for a movie that has the title 'Back to the Future'
+    // const query = { title: 'Back to the Future' };
+    // const movie = await todos.findOne(query);
+    // console.log(movie);
+  } finally {
+    // Ensures that the client will close when you finish/error
+    await mongoClient.close();
+  }
+}
+run().catch(console.dir);
 
-  // Removes any existing entries in the users collection
-  db.collection("todos").deleteMany({ name: { $exists: true } }, function (
-    err,
-    r
-  ) {
-    for (let i = 0; i < dbTodos.length; i++) {
-      // loop through all default users
-      dbTodos.push({ name: todos[i] });
-    }
-    // add them to users collection
-    db.collection("todos").insertMany(dbTodos, function (err, r) {
-      console.log("Inserted initial todos");
-    });
-  });
+
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept"
+  );
+  next();
 });
 
 // Send user data - used by client.js
@@ -56,26 +57,6 @@ app.get("/users", function (request, response) {
       response.send(users); // sends users back to the page
     });
 });
-
-// console.log(process.env.MONGODB_URL);
-// DB connection started ***
-//Set up default mongoose connection
-// var mongoDB = "mongodb://127.0.0.1/test";
-// mongoose.connect(mongoDB, { useNewUrlParser: true, useUnifiedTopology: true });
-
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept"
-  );
-  next();
-});
-
-app.use(bodyParser.json());
-
-// serving react app on same port as express api
-app.use(express.static(path.join(__dirname, "client/build")));
 
 app.get("/json", function (req, res) {
   const response = "Hello World";
@@ -95,6 +76,6 @@ app.get("/todos", function (req, res) {
 // API routes
 app.use("/api", routes);
 
-app.listen(process.env.PORT || 5001, () => {
-  console.log(`Server running on port 5001`);
+app.listen(process.env.PORT || 5002, () => {
+  console.log(`Server running on port 5002`);
 });
