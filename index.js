@@ -5,6 +5,10 @@ const path = require("path");
 const routes = require("./routes/api");
 const { MongoClient } = require("mongodb");
 
+const MONGODB_URL =
+  "mongodb+srv://nicholeMongoDB:vcGRsRmJonqnF9rdQhosM@practice-cluster.bryzerz.mongodb.net/?retryWrites=true&w=majority";
+const DB_NAME = "nichole_db";
+
 require("dotenv").config();
 
 let db;
@@ -19,13 +23,16 @@ app.use(express.static(path.join(__dirname, "client/build")));
 
 let todos = [];
 
-const mongoClient = new MongoClient(process.env.MONGODB_URL);
+const options = { useNewUrlParser: true, useUnifiedTopology: false };
+
+const mongoClient = new MongoClient(MONGODB_URL, options);
 async function run() {
   try {
-    const database = mongoClient.db(process.env.DB_NAME);
-    const todos = database.collection('todos');
-    const todo = await todos.findOne({name: 'first_todo'})
-    console.log('todo inserted! maybe?, todo collection:', todo)
+    const database = mongoClient.db(DB_NAME);
+    const todos = database.collection("todos");
+    await todos.insertOne({ name: "first_todo" });
+    const todo = await todos.findOne({ name: "first_todo" });
+    console.log("todo inserted! maybe?, todo collection:", todo);
     // Query for a movie that has the title 'Back to the Future'
     // const query = { title: 'Back to the Future' };
     // const movie = await todos.findOne(query);
@@ -37,41 +44,40 @@ async function run() {
 }
 run().catch(console.dir);
 
+// app.use((req, res, next) => {
+//   res.header("Access-Control-Allow-Origin", "*");
+//   res.header(
+//     "Access-Control-Allow-Headers",
+//     "Origin, X-Requested-With, Content-Type, Accept"
+//   );
+//   next();
+// });
 
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept"
-  );
-  next();
-});
+// // Send user data - used by client.js
+// app.get("/users", function (request, response) {
+//   db.collection("users")
+//     .find()
+//     .toArray(function (err, users) {
+//       // finds all entries in the users collection
+//       console.log("db users maybe:", users);
+//       response.send(users); // sends users back to the page
+//     });
+// });
 
-// Send user data - used by client.js
-app.get("/users", function (request, response) {
-  db.collection("users")
-    .find()
-    .toArray(function (err, users) {
-      // finds all entries in the users collection
-      console.log("db users maybe:", users);
-      response.send(users); // sends users back to the page
-    });
-});
+// app.get("/json", function (req, res) {
+//   const response = "Hello World";
+//   res.json({
+//     message: response
+//   });
+// });
 
-app.get("/json", function (req, res) {
-  const response = "Hello World";
-  res.json({
-    message: response
-  });
-});
-
-app.get("/todos", function (req, res) {
-  const response = "Hello World";
-  console.log("app.get todos!");
-  res.json({
-    message: response
-  });
-});
+// app.get("/todos", function (req, res) {
+//   const response = "Hello World";
+//   console.log("app.get todos!");
+//   res.json({
+//     message: response
+//   });
+// });
 
 // API routes
 app.use("/api", routes);
